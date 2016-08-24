@@ -1,0 +1,848 @@
+<html>
+<body>
+<script type="text/javascript">
+
+function main()
+{
+	var view = new View
+	(
+		ToolPaint.Name,
+		[
+			new ToolFileSave(),
+			new ToolViewSize(new Coords(320, 240)),
+			new ToolBrushSize(),
+			new ToolColorPalette(),
+			new ToolLayers(),
+			new ToolPaint(),
+			new ToolFill()
+		]
+	);
+
+	document.body.appendChild(view.htmlElementBuild());		
+}
+
+// classes
+
+function Color(name, systemColor)
+{
+	this.name = name;
+	this.systemColor = systemColor;
+}
+{
+	Color.Instances = new (function()
+	{
+		this.Black 	= new Color("Black", "#000000");
+		this.Blue 	= new Color("Blue", "#0000ff");
+		this.Cyan	= new Color("Cyan", "#00ffff");
+		this.Gray	= new Color("Gray", "#808080");
+		this.GrayDark	= new Color("GrayDark", "#404040");
+		this.GrayLight 	= new Color("GrayLight", "#C0C0C0");
+		this.Green	= new Color("Green", "00ff00");
+		this.Orange	= new Color("Orange", "ff8000");
+		this.Red 	= new Color("Red", "#ff0000");
+		this.Violet	= new Color("Violet", "#ff00ff");
+		this.White 	= new Color("White", "#ffffff");
+		this.Yellow	= new Color("Yellow", "#ffff00");
+
+		this._All =
+		[
+			this.Black,
+			this.GrayDark,
+			this.Gray,
+			this.GrayLight,
+			this.White,
+
+			this.Red,
+			this.Orange,
+			this.Yellow,
+			this.Green,
+			this.Cyan,
+			this.Blue,
+			this.Violet
+		];
+	})();
+}
+
+function Coords(x, y)
+{
+	this.x = x;
+	this.y = y;	
+}
+{
+	Coords.prototype.clone = function()
+	{
+		return new Coords(this.x, this.y);
+	}
+
+	Coords.prototype.divide = function(other)
+	{
+		this.x /= other.x;
+		this.y /= other.y;
+
+		return this;
+	}
+
+	Coords.prototype.divideScalar = function(scalar)
+	{
+		this.x /= 2;
+		this.y /= 2;
+
+		return this;
+	}
+
+	Coords.prototype.multiply = function(other)
+	{
+		this.x *= other.x;
+		this.y *= other.y;
+
+		return this;
+	}
+
+	Coords.prototype.overwriteWith = function(other)
+	{
+		this.x = other.x;
+		this.y = other.y;
+
+		return this;
+	}
+
+	Coords.prototype.overwriteWithDimensions = function(x, y)
+	{
+		this.x = x;
+		this.y = y;
+
+		return this;
+	}
+
+	Coords.prototype.toString = function()
+	{
+		return "(" + this.x + "," + this.y + ")";
+	}
+}
+
+function Tool()
+{}
+{
+	Tool.processSelection = function(event)
+	{
+		var tool = event.target.parentTool;
+		tool.parentView.toolSelected = tool;
+	}
+}
+
+function ToolBrushSize()
+{
+	this.brushSizeSelected = 1;
+}
+{
+	// constants
+
+	ToolBrushSize.Name = "BrushSize";
+	ToolBrushSize.prototype.name = ToolBrushSize.Name;
+
+	// static methods
+
+	ToolBrushSize.prototype.processBrushSizeChange = function(event)
+	{
+		var tool = event.target.parentTool;
+		tool.brushSizeSelected = event.target.value;
+	}
+
+	// instance methods
+
+	ToolBrushSize.prototype.htmlElementBuild = function()
+	{		
+		var tr = document.createElement("tr");
+
+		var td = document.createElement("td");
+		td.innerHTML = "Brush Size:";
+		tr.appendChild(td);
+
+		td = document.createElement("td");
+		var numberBrushSize = document.createElement("input");
+		numberBrushSize.type = "number";
+		numberBrushSize.value = this.brushSizeSelected;
+		numberBrushSize.style.width = "64px";
+		numberBrushSize.onchange = this.processBrushSizeChange.bind(this);
+		numberBrushSize.parentTool = this;
+		td.appendChild(numberBrushSize);
+		tr.appendChild(td);
+
+		var returnValue = document.createElement("table");
+		returnValue.appendChild(tr);
+
+		return returnValue;	
+	}
+}
+
+function ToolColorPalette()
+{
+	this.colorSelected = Color.Instances.Black;
+}
+{
+	// constants
+
+	ToolColorPalette.Name = "ColorPalette";
+	ToolColorPalette.prototype.name = ToolColorPalette.Name;
+
+	// instance methods
+
+	// event handlers
+
+	ToolColorPalette.prototype.processColorChange = function(event)
+	{
+		var tool = event.target.parentTool;
+		tool.colorSelected = Color.Instances._All[event.target.selectedIndex];
+	}
+
+	// html
+
+	ToolColorPalette.prototype.htmlElementBuild = function()
+	{
+		var tr = document.createElement("tr");
+
+		var pForLabel = document.createElement("p");
+		pForLabel.innerHTML = "Color:";
+		var td = document.createElement("td");
+		td.appendChild(pForLabel);
+		tr.appendChild(td);
+
+		td = document.createElement("td");
+		var selectColor = document.createElement("select");
+		for (var c = 0; c < Color.Instances._All.length; c++)
+		{
+			var color = Color.Instances._All[c];
+			var optionForColor = document.createElement("option");
+			optionForColor.text = color.name;
+			selectColor.appendChild(optionForColor);
+		}
+		selectColor.onchange = this.processColorChange.bind(this);
+		selectColor.parentTool = this;
+		td.appendChild(selectColor);
+		tr.appendChild(td);
+
+		var returnValue = document.createElement("table");
+		returnValue.appendChild(tr);
+
+		return returnValue;	
+	}
+}
+
+function ToolFileSave()
+{
+	this.fileNameToSaveAs = "Untitled.png";
+}
+{
+	// constants
+
+	ToolFileSave.Name = "FileSave";
+	ToolFileSave.prototype.name = ToolFileSave.Name;
+
+	// instance methods
+
+	// event handlers
+
+	ToolFileSave.prototype.processFileNameToSaveAsChange = function(event)
+	{
+		var tool = event.target.parentTool;
+		tool.fileNameToSaveAs = event.target.value;
+	}
+
+	ToolFileSave.prototype.processSave = function(event)
+	{
+		var tool = event.target.parentTool;
+
+		var canvas = document.getElementById("viewCanvas");
+
+		var imageFromCanvasURL = canvas.toDataURL("image/png");
+
+		var imageAsByteString = atob(imageFromCanvasURL.split(',')[1]);
+		var imageAsArrayBuffer = new ArrayBuffer(imageAsByteString.length);
+		var imageAsArrayUnsigned = new Uint8Array(imageAsArrayBuffer);
+		for (var i = 0; i < imageAsByteString.length; i++) 
+		{
+			imageAsArrayUnsigned[i] = imageAsByteString.charCodeAt(i);
+		}
+
+		var imageAsBlob = new Blob([imageAsArrayBuffer], {type:'image/png'});
+
+		var link = document.createElement("a");
+		link.href = window.webkitURL.createObjectURL(imageAsBlob);
+		link.download = tool.fileNameToSaveAs;
+		link.click();
+	}
+
+	// html
+
+	ToolFileSave.prototype.htmlElementBuild = function()
+	{
+		var tr = document.createElement("tr");
+
+		var td = document.createElement("td");
+		var buttonSave = document.createElement("button");
+		buttonSave.onclick = this.processSave.bind(this);
+		buttonSave.innerHTML = "Save As:";
+		buttonSave.parentTool = this;
+		td.appendChild(buttonSave);
+		tr.appendChild(td);
+
+		td = document.createElement("td");
+		var textFileName = document.createElement("input");
+		textFileName.value = "Untitled.png";
+		textFileName.onchange = this.processFileNameToSaveAsChange.bind(this);
+		textFileName.parentTool = this;
+		td.appendChild(textFileName);
+		tr.appendChild(td);
+
+		var returnValue = document.createElement("table");
+
+		returnValue.appendChild(tr);
+
+		return returnValue;		
+	}
+}
+
+function ToolFill()
+{}
+{
+	// constants 
+
+	ToolFill.Name = "Fill";
+	ToolFill.prototype.name = ToolFill.Name;
+
+	// instance methods
+
+	ToolFill.prototype.drawRectangle = function(color, pos, size)
+	{
+		var graphics = this.parentView.graphics;
+		graphics.fillStyle = color.systemColor;
+		graphics.fillRect(pos.x, pos.y, size.x, size.y);
+	}
+
+	ToolFill.prototype.htmlElementBuild = function()
+	{
+		var returnValue = document.createElement("button");
+		returnValue.parentTool = this;
+		returnValue.innerHTML = "Fill";
+		returnValue.onclick = Tool.processSelection;
+		return returnValue;	
+	}
+
+	ToolFill.prototype.processMouseDown = function()
+	{
+		var toolLookup = this.parentView.toolLookup;
+
+		this.drawRectangle
+		(
+			toolLookup[ToolColorPalette.Name].colorSelected, 
+			new Coords(0, 0),
+			toolLookup[ToolViewSize.Name].viewSizeInPixels
+		);		
+	}
+
+	ToolFill.prototype.processMouseMove = function()
+	{
+		// do nothing
+	}
+}
+
+function ToolLayers()
+{
+	this.layerIndexSelected = 0;
+}
+{
+	// constants
+
+	ToolLayers.Name = "Layers";
+	ToolLayers.prototype.name = ToolLayers.Name;
+
+	// instance methods
+
+	// event handlers
+
+	ToolLayers.prototype.processButtonLayerAddClicked = function(event)
+	{
+		var layersAll = this.parentView.layers;
+		var layerNewIndex = layersAll.length;
+		var layerNew = new ViewLayer("Layer" + layerNewIndex);
+		layerNew.parentView = this.parentView;
+		layerNew.htmlElementBuild();
+		layersAll.push(layerNew);
+		layersAll[layerNew.name] = layerNew;
+
+		this.layerIndexSelected = layerNewIndex;
+
+		this.htmlElementUpdate();
+	}
+
+	ToolLayers.prototype.processButtonLayerHideOrShowClicked = function(event)
+	{
+		var layerSelected = this.parentView.layerSelected();
+		layerSelected.isVisible = (layerSelected.isVisible == false);
+		this.htmlElementUpdate();
+		this.parentView.htmlElementUpdate();
+	}
+
+	ToolLayers.prototype.processButtonLayerRemoveClicked = function(event)
+	{
+		var layerToRemove = this.parentView.layerSelected();
+
+		var layersAll = this.parentView.layers;
+		layersAll.splice(this.layerIndexSelected, 1);
+		delete layersAll[layerToRemove.name];
+
+		this.layerIndexSelected = 0;
+
+		this.htmlElementUpdate();
+		this.parentView.htmlElementUpdate();
+	}
+
+	ToolLayers.prototype.processLayerChange = function(event)
+	{
+		this.layerIndexSelected = event.srcElement.selectedIndex;
+	}
+
+	// html
+
+	ToolLayers.prototype.htmlElementBuild = function()
+	{
+		var tr = document.createElement("tr");
+
+		var pForLabel = document.createElement("p");
+		pForLabel.innerHTML = "Layer:";
+		var td = document.createElement("td");
+		td.appendChild(pForLabel);
+		tr.appendChild(td);
+
+		td = document.createElement("td");
+		var selectLayer = document.createElement("select");
+		selectLayer.parentTool = this;
+		selectLayer.onchange = this.processLayerChange.bind(this);
+		this.selectLayer = selectLayer;
+		
+		td.appendChild(selectLayer);
+		tr.appendChild(td);
+		
+		td = document.createElement("td");
+		var buttonLayerAdd = document.createElement("button");
+		buttonLayerAdd.innerHTML = "Add";
+		buttonLayerAdd.onclick = this.processButtonLayerAddClicked.bind(this);
+		td.appendChild(buttonLayerAdd);
+		tr.appendChild(td);
+
+		td = document.createElement("td");
+		var buttonLayerDelete = document.createElement("button");
+		buttonLayerDelete.innerHTML = "Remove";
+		buttonLayerDelete.onclick = this.processButtonLayerRemoveClicked.bind(this);
+		td.appendChild(buttonLayerDelete);
+		tr.appendChild(td);
+
+		td = document.createElement("td");
+		var buttonLayerHideOrShow = document.createElement("button");
+		buttonLayerHideOrShow.innerHTML = "Hide/Show";
+		buttonLayerHideOrShow.onclick = this.processButtonLayerHideOrShowClicked.bind(this);
+		td.appendChild(buttonLayerHideOrShow);
+		tr.appendChild(td);
+		
+		var returnValue = document.createElement("table");
+		returnValue.appendChild(tr);
+
+		this.htmlElement = returnValue;
+
+		this.htmlElementUpdate();
+
+		return returnValue;	
+	}
+
+	ToolLayers.prototype.htmlElementUpdate = function()
+	{
+		this.selectLayer.innerHTML = "";
+
+		var layersAll = this.parentView.layers;
+		for (var c = 0; c < layersAll.length; c++)
+		{
+			var layer = layersAll[c];
+			var optionForLayer = document.createElement("option");
+			optionForLayer.text = layer.name;
+			this.selectLayer.appendChild(optionForLayer);
+		}
+
+		this.selectLayer.selectedIndex = this.layerIndexSelected;
+	}
+}
+
+function ToolPaint()
+{}
+{
+	// constants
+
+	ToolPaint.Name = "Paint";
+	ToolPaint.prototype.name = ToolPaint.Name;
+
+	// instance methods
+
+	ToolPaint.prototype.drawLine = function(graphics, color, widthInPixels, startPos, endPos)
+	{
+		graphics.strokeStyle = color.systemColor;
+		graphics.lineWidth = widthInPixels;
+		graphics.lineCap = "round";
+		graphics.beginPath();
+		graphics.moveTo(startPos.x, startPos.y);
+		graphics.lineTo(endPos.x, endPos.y);
+		graphics.stroke();
+	}
+
+	// event handlers
+
+	ToolPaint.prototype.processMouseDown = function()
+	{
+		// do nothing
+	}
+
+	ToolPaint.prototype.processMouseMove = function()
+	{
+		var toolLookup = this.parentView.toolLookup;
+
+		this.drawLine
+		(
+			this.parentView.layerSelected().graphics,
+			toolLookup[ToolColorPalette.Name].colorSelected, 
+			toolLookup[ToolBrushSize.Name].brushSizeSelected,
+			this.parentView.mousePosPrev, 
+			this.parentView.mousePos
+		);
+
+		this.parentView.htmlElementUpdate();
+	}
+
+	// html
+
+	ToolPaint.prototype.htmlElementBuild = function()
+	{
+		var returnValue = document.createElement("button");
+		returnValue.parentTool = this;
+		returnValue.innerHTML = this.name;
+		returnValue.onclick = Tool.processSelection;
+		return returnValue;	
+	}
+}
+
+function ToolViewSize(viewSizeInPixels)
+{
+	this.viewSizeInPixels = viewSizeInPixels;
+}
+{
+	// constants
+
+	ToolViewSize.Name = "ViewSize";
+	ToolViewSize.prototype.name = ToolViewSize.Name;
+
+	// instance methods
+
+	// event handlers
+
+	ToolViewSize.prototype.processViewSizeChange = function(event)
+	{
+		var viewSizeInPixels = new Coords
+		(
+			parseInt(this.numberViewSizeX.value), 
+			parseInt(this.numberViewSizeY.value)
+		);	
+		this.viewSizeInPixels = viewSizeInPixels;
+
+		var layersAll = this.parentView.layers;
+
+		for (var i = 0; i < layersAll.length; i++)
+		{
+			var layer = layersAll[i];
+			var canvas = layer.canvas;
+
+			var imageFromCanvasURL = canvas.toDataURL("image/png");
+			var imageFromCanvas = document.createElement("img");
+			imageFromCanvas.width = canvas.width;
+			imageFromCanvas.height = canvas.height;	
+	
+			imageFromCanvas.parentLayer = layer;
+			imageFromCanvas.onload = this.processViewSizeChange2.bind(this);
+
+			imageFromCanvas.src = imageFromCanvasURL;
+
+			canvas.width = viewSizeInPixels.x;
+			canvas.height = viewSizeInPixels.y;
+		}
+
+		var canvas = this.parentView.htmlElementCanvas;
+		canvas.width = viewSizeInPixels.x;
+		canvas.height = viewSizeInPixels.y;
+	}
+
+	ToolViewSize.prototype.processViewSizeChange2 = function(event)	
+	{
+		var imageFromCanvas = event.target;
+		var graphics = imageFromCanvas.parentLayer.graphics;
+
+		graphics.drawImage
+		(
+			imageFromCanvas,
+			0, 0, // source pos
+			imageFromCanvas.width, imageFromCanvas.height, // source size
+			0, 0, // destination pos
+			imageFromCanvas.width, imageFromCanvas.height // destination size
+		);
+
+		this.parentView.htmlElementUpdate();
+	}
+
+	// html
+
+	ToolViewSize.prototype.htmlElementBuild = function()
+	{
+		var tr = document.createElement("tr");
+
+		var td = document.createElement("td");
+		var button = document.createElement("button");
+		button.onclick = this.processViewSizeChange.bind(this);
+		button.innerHTML = "Change Size:";
+		button.parentTool = this;
+		td.appendChild(button);
+		tr.appendChild(td);
+
+		td = document.createElement("td");
+		var numberViewSizeX = document.createElement("input");
+		numberViewSizeX.type = "number";
+		numberViewSizeX.value = this.viewSizeInPixels.x;
+		numberViewSizeX.style.width = "64px";
+		numberViewSizeX.parentTool = this;
+		td.appendChild(numberViewSizeX);
+		tr.appendChild(td);
+		this.numberViewSizeX = numberViewSizeX;
+
+		td = document.createElement("td");
+		var numberViewSizeY = document.createElement("input");
+		numberViewSizeY.type = "number";
+		numberViewSizeY.value = this.viewSizeInPixels.y;
+		numberViewSizeY.style.width = "64px";
+		numberViewSizeY.parentTool = this;
+		td.appendChild(numberViewSizeY);
+		tr.appendChild(td);
+		this.numberViewSizeY = numberViewSizeY;
+
+		var returnValue = document.createElement("table");
+
+		returnValue.appendChild(tr);
+
+		return returnValue;		
+	}
+}
+
+function View(toolNameToSelectInitial, tools)
+{
+	this.tools = tools;
+	this.toolLookup = new Array();
+
+	for (var t = 0; t < this.tools.length; t++)
+	{
+		var tool = this.tools[t];
+
+		this.toolLookup[tool.name] = tool;
+
+		tool.parentView = this;		
+	}
+
+	this.toolSelected = this.toolLookup[toolNameToSelectInitial];
+
+	this.layers = 
+	[
+		new ViewLayer("Layer0"),
+	];
+
+	for (var i = 0; i < this.layers.length; i++)
+	{
+		var layer = this.layers[i];
+		this.layers[layer.name] = layer;
+		layer.parentView = this;
+		layer.htmlElementBuild();
+	}
+}
+{
+	// static methods
+
+	View.imageURLForAlphaZeroBuild = function()
+	{
+		var imageSizeInPixels = new Coords(32, 32);
+		var imageSizeInPixelsHalf = imageSizeInPixels.clone().divideScalar(2);
+
+		var canvas = document.createElement("canvas");
+		canvas.width = imageSizeInPixels.x;
+		canvas.height = imageSizeInPixels.y;
+
+		var graphicsForCanvas = canvas.getContext("2d");
+
+		graphicsForCanvas.fillStyle = Color.Instances.Gray.systemColor;
+		graphicsForCanvas.fillRect(0, 0, imageSizeInPixels.x, imageSizeInPixels.y);		
+		graphicsForCanvas.fillStyle = Color.Instances.GrayDark.systemColor;
+		graphicsForCanvas.fillRect(0, 0, imageSizeInPixelsHalf.x, imageSizeInPixelsHalf.y);		
+		graphicsForCanvas.fillRect
+		(
+			imageSizeInPixelsHalf.x, 
+			imageSizeInPixelsHalf.y, 
+			imageSizeInPixelsHalf.x, 
+			imageSizeInPixelsHalf.y
+		);
+
+		var imageFromCanvasURL = canvas.toDataURL("image/png");
+
+		return imageFromCanvasURL;
+	}
+
+	// instance methods
+
+	View.prototype.layerSelected = function()
+	{
+		var layerIndexSelected = this.toolLookup[ToolLayers.Name].layerIndexSelected;
+		var returnValue = this.layers[layerIndexSelected]; 
+		return returnValue;
+	}
+
+	View.prototype.sizeInPixels = function()
+	{
+		var returnValue = this.toolLookup[ToolViewSize.Name].viewSizeInPixels;
+		return returnValue;
+	}
+
+	// event handlers
+
+	View.prototype.processMouseDown = function(event)
+	{		
+		event.preventDefault(); // otherwise the cursor changes
+
+		var boundingClientRect = event.target.getBoundingClientRect();
+		this.mousePos.overwriteWithDimensions
+		(
+			event.clientX - boundingClientRect.left,
+			event.clientY - boundingClientRect.top
+		);
+		this.mousePosPrev.overwriteWith(this.mousePos);
+		this.isMouseDown = true;
+		this.toolSelected.processMouseDown();
+	}
+
+	View.prototype.processMouseOver = function(event)
+	{
+		// do nothing
+	}
+
+	View.prototype.processMouseOut = function(event)
+	{
+		this.isMouseDown = false;		
+	}
+
+	View.prototype.processMouseMove = function(event)
+	{
+		if (this.isMouseDown == true)
+		{
+			this.mousePosPrev.overwriteWith(this.mousePos);
+			var boundingClientRect = event.target.getBoundingClientRect();
+			this.mousePos.overwriteWithDimensions
+			(
+				event.clientX - boundingClientRect.left,
+				event.clientY - boundingClientRect.top
+			);
+			this.toolSelected.processMouseMove();
+		}
+	}	
+
+	View.prototype.processMouseUp = function(event)
+	{
+		this.isMouseDown = false;
+	}
+
+	// html
+
+	View.prototype.htmlElementBuild = function()
+	{
+		this.isMouseDown = false;
+		this.mousePos = new Coords(0, 0);
+		this.mousePosPrev = new Coords(0, 0);
+
+		var sizeInPixels = this.toolLookup[ToolViewSize.Name].viewSizeInPixels;
+
+		var canvas		= document.createElement("canvas");
+		canvas.id		= "viewCanvas";
+		canvas.width		= sizeInPixels.x;
+		canvas.height		= sizeInPixels.y;
+		canvas.style.cursor 	= "crosshair";
+		canvas.style.backgroundImage = "url('" + View.imageURLForAlphaZeroBuild() + "')";
+		canvas.parentView = this;
+
+		this.htmlElementCanvas = canvas;
+		this.graphics = canvas.getContext("2d");
+
+		canvas.onmousedown = this.processMouseDown.bind(this);
+		canvas.onmousemove = this.processMouseMove.bind(this);
+		canvas.onmouseout = this.processMouseOut.bind(this);
+		canvas.onmouseover = this.processMouseOver.bind(this);
+		canvas.onmouseup = this.processMouseUp.bind(this);
+
+		var divTools = document.createElement("div");
+
+		for (var t = 0; t < this.tools.length; t++)
+		{
+			var tool = this.tools[t];
+
+			divTools.appendChild(tool.htmlElementBuild());
+		}
+
+		var returnValue = document.createElement("div");
+		returnValue.appendChild(canvas);
+		returnValue.appendChild(divTools);
+
+		return returnValue;
+	}
+
+	View.prototype.htmlElementUpdate = function()
+	{
+		var sizeInPixels = this.sizeInPixels();
+		this.graphics.clearRect(0, 0, sizeInPixels.x, sizeInPixels.y);
+
+		for (var i = 0; i < this.layers.length; i++)
+		{
+			var layer = this.layers[i];
+			if (layer.isVisible == true)
+			{
+				var canvasForLayer = layer.canvas;
+				this.graphics.drawImage(canvasForLayer, 0, 0);
+			}
+		}
+	}
+}
+
+function ViewLayer(name)
+{
+	this.name = name;
+	this.isVisible = true;
+}
+{
+	ViewLayer.prototype.htmlElementBuild = function()
+	{
+		var sizeInPixels = this.parentView.sizeInPixels();
+
+		var canvas = document.createElement("canvas");
+		canvas.id = "canvasLayer" + this.name;
+		canvas.width = sizeInPixels.x;
+		canvas.height = sizeInPixels.y;
+
+		this.canvas = canvas;
+		this.graphics = canvas.getContext("2d");
+
+		return canvas;
+	}
+}
+
+// run
+
+main();
+
+</script>
+</body>
+</html>
